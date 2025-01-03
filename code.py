@@ -43,19 +43,25 @@ def predict_stock_price(data_source, days_to_predict=5):
         try:
             response = requests.get(data_source)
             response.raise_for_status()  # Raise an exception for bad status codes
-            data = pd.read_csv(io.StringIO(response.text), skiprows=[1]) #skips 2nd line as it is ticker label, only uses rows with actual numeric data
+            data = pd.read_csv(io.StringIO(response.text), header=None, skiprows = [1])  #skips header, reads numeric columns starting at third row by skiprows = [1]
+
         except requests.exceptions.RequestException as e:
             print(f"Error fetching data from URL: {e}")
             return
     else:
         try:
-            data = pd.read_csv(data_source, skiprows=[1])
+            data = pd.read_csv(data_source, header = None, skiprows=[1]) #skips header rows , read data starting from row 3 by skiprow= [1]
+
         except FileNotFoundError:
             print(f"Error: File not found at path: {data_source}")
             return
         except Exception as e:
             print(f"Error reading local file: {e}")
             return
+    # Set our own headers (which we use to refer to relevant numerical columns in code) after data is read.
+    data.columns = ['Price','Adj Close',	'Close',	'High',	'Low',	'Open','Volume'] # Set own column headers.
+
+
 
     # Ensure the data is a NumPy array
     if isinstance(data, pd.DataFrame):
