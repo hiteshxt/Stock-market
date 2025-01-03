@@ -1,40 +1,3 @@
-import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-import matplotlib.pyplot as plt
-import numpy as np
-import requests  # To fetch data from a URL
-import io  # To handle data streams
-
-
-class StockDataset(Dataset):
-    """PyTorch Dataset for stock prices."""
-
-    def __init__(self, data):
-        self.data = data
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        return torch.tensor(self.data[idx, 0:1], dtype=torch.float32), torch.tensor(
-            self.data[idx, 1], dtype=torch.float32
-        )
-
-
-class LinearRegressionModel(nn.Module):
-    """Simple linear regression model in PyTorch."""
-
-    def __init__(self, input_size=1, output_size=1):
-        super(LinearRegressionModel, self).__init__()
-        self.linear = nn.Linear(input_size, output_size)
-
-    def forward(self, x):
-        return self.linear(x)
-
-
 def predict_stock_price(data_source, days_to_predict=5):
     """Predicts future stock prices using linear regression in PyTorch."""
 
@@ -82,6 +45,8 @@ def predict_stock_price(data_source, days_to_predict=5):
       print(f"Error during type conversion in pandas: {e}")
       return
 
+   #Data Filling Stage of the Close
+    data['Close'].fillna(method='ffill', inplace=True) #filling by forward value.  (last observed if possible, zero by default if starting nan) if none are observed in the closing value itself fill na
 
     # Data validity check (to further minimize parsing/type problems), specifically that our main column for data analysis:
     if  data['Close'].isnull().any() or not all(isinstance(item, (int, float)) for item in data['Close']):
@@ -89,8 +54,6 @@ def predict_stock_price(data_source, days_to_predict=5):
                 "Error: 'Close' column has missing values or non-numeric values which is not accepted."
             )
             return
-
-
 
     # Ensure the data is a NumPy array
 
