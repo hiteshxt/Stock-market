@@ -43,26 +43,45 @@ def predict_stock_price(data_source, days_to_predict=5):
         try:
             response = requests.get(data_source)
             response.raise_for_status()  # Raise an exception for bad status codes
-            data = pd.read_csv(io.StringIO(response.text))
+            data = pd.read_csv(io.StringIO(response.text), skiprows=[1]) #skips 2nd line as it is ticker label, only uses rows with actual numeric data
         except requests.exceptions.RequestException as e:
             print(f"Error fetching data from URL: {e}")
             return
     else:
         try:
-            data = pd.read_csv(data_source)
+            data = pd.read_csv(data_source, skiprows=[1])
         except FileNotFoundError:
             print(f"Error: File not found at path: {data_source}")
             return
         except Exception as e:
             print(f"Error reading local file: {e}")
             return
+
     # Ensure the data is a NumPy array
     if isinstance(data, pd.DataFrame):
+         # Attempt to convert specific columns to numeric, handling potential errors
+        try:
+          data['Price'] = pd.to_numeric(data['Price'], errors='coerce')
+          data['Adj Close'] = pd.to_numeric(data['Adj Close'], errors='coerce')
+          data['Close'] = pd.to_numeric(data['Close'], errors='coerce')
+          data['High'] = pd.to_numeric(data['High'], errors='coerce')
+          data['Low'] = pd.to_numeric(data['Low'], errors='coerce')
+          data['Open'] = pd.to_numeric(data['Open'], errors='coerce')
+          data['Volume'] = pd.to_numeric(data['Volume'], errors='coerce')
+        except Exception as e:
+          print(f"Error during type conversion in pandas: {e}")
+          return
         data = data.to_numpy()
+
     # Ensure the correct format
     if data.shape[1] < 3:
-      print("Error: Please ensure the input CSV contains at least 3 columns.")
-      return
+        print("Error: Please ensure the input CSV contains at least 3 columns.")
+        return
+    # Check for NaN
+    if np.isnan(data).any():
+        print("Error: Input data contains NaN values.")
+        return
+
 
     # 2. Prepare Data
     price_shift = np.roll(data[:, 2], 1)
