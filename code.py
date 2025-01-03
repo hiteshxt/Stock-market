@@ -30,41 +30,40 @@ class LinearRegressionModel(nn.Module):
 def predict_stock_price(data, days_to_predict=5):
     
 
-    # Prepare Data
-    # Ensure the data is a NumPy array
+    
     if isinstance(data, pd.DataFrame):
         data = data.to_numpy()
 
     price_shift = np.roll(data[:,2], 1)
     price_shift[0] = data[0,2]
     prepared_data = np.stack([price_shift, data[:,2]], axis=1)[1:,:]
-    #Split into training and testing
+    
     train_ratio = 0.8
     train_size = int(len(prepared_data)*train_ratio)
     train_data, test_data = prepared_data[:train_size], prepared_data[train_size:]
-    # Create PyTorch Dataset and DataLoader
+    
     train_dataset = StockDataset(train_data)
     test_dataset = StockDataset(test_data)
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-    # 2. Set up device, model, loss, and optimizer
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LinearRegressionModel().to(device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-    # 3. Training Loop
+    
     num_epochs = 1000
     for epoch in range(num_epochs):
         for x_batch, y_batch in train_dataloader:
           x_batch = x_batch.to(device)
           y_batch = y_batch.to(device)
           
-          # forward pass
+          
           outputs = model(x_batch)
           loss = criterion(outputs.squeeze(), y_batch)
 
-          # backward and optimize
+          
           optimizer.zero_grad()
           loss.backward()
           optimizer.step()
@@ -72,9 +71,9 @@ def predict_stock_price(data, days_to_predict=5):
         if (epoch + 1) % 100 == 0:
             print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
-    # 4. Evaluate the Model
-    model.eval()  # Put model in evaluation mode
-    with torch.no_grad(): # Disable gradient calculation
+    
+    model.eval()  
+    with torch.no_grad(): 
       total_loss = 0
       for x_test, y_test in test_dataloader:
         x_test = x_test.to(device)
@@ -85,7 +84,7 @@ def predict_stock_price(data, days_to_predict=5):
       mse = total_loss/len(test_dataloader)
       print(f"\nMean Squared Error (MSE) on test set: {mse:.2f}")
 
-    # 5. Prediction for future days:
+    
     last_price = torch.tensor([prepared_data[-1][1]], dtype=torch.float32).to(device)
     predicted_prices = []
     current_prediction = last_price
@@ -95,12 +94,12 @@ def predict_stock_price(data, days_to_predict=5):
         predicted_prices.append(next_prediction.item())
         current_prediction = next_prediction
 
-    # 6. Plotting and Display
+    
     print("\nPredicted prices:")
     for i, price in enumerate(predicted_prices):
         print(f"Day {i+1}: {price:.2f}")
 
-    # Plotting the data:
+    
     data = prepared_data
     plt.figure(figsize=(10, 6))
     plt.plot(range(len(data[-50:])), data[-50:,1], label='Actual Closing Prices (Last 50 days)', color='blue')
@@ -115,11 +114,11 @@ def predict_stock_price(data, days_to_predict=5):
     plt.tight_layout()
     plt.show()
 
-# Load the data:
+
 file_path = "GOOG.csv"
 data = pd.read_csv(file_path)
 
-# Get Input from User
+
 if __name__ == "__main__":
   days = int(input("Enter number of days to predict: "))
   predict_stock_price(data, days)
